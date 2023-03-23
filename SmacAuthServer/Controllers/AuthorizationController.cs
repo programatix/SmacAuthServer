@@ -184,7 +184,7 @@ namespace SmacAuthServer.Controllers
                     .SetClaim(Claims.Name, await _userManager.GetUserNameAsync(user))
                     .SetClaim(Claims.GivenName, "Given Name")
                     .SetClaim(Claims.FamilyName, "Surname")
-                    .SetClaim(Claims.Picture, "https://dummy.profile.com/picture_link");
+                    .SetClaim(Claims.Picture, "");
 
             // Note: in this sample, the granted scopes match the requested scope
             // but you may want to allow the user to uncheck specific scopes.
