@@ -80,6 +80,8 @@ namespace SmacAuthServer.Controllers
                 identity.SetClaim(Claims.Subject, await _userManager.GetUserIdAsync(user))
                         .SetClaim(Claims.Email, await _userManager.GetEmailAsync(user))
                         .SetClaim(Claims.Name, await _userManager.GetUserNameAsync(user))
+                        .SetClaim(Claims.GivenName, "Given Name")
+                        .SetClaim(Claims.FamilyName, "Surname")
                         .SetClaim(Claims.Picture, "https://dummy.profile.com/picture_link");
 
                 identity.SetDestinations(GetDestinations);
@@ -180,6 +182,8 @@ namespace SmacAuthServer.Controllers
             identity.SetClaim(Claims.Subject, await _userManager.GetUserIdAsync(user))
                     .SetClaim(Claims.Email, await _userManager.GetEmailAsync(user))
                     .SetClaim(Claims.Name, await _userManager.GetUserNameAsync(user))
+                    .SetClaim(Claims.GivenName, "Given Name")
+                    .SetClaim(Claims.FamilyName, "Surname")
                     .SetClaim(Claims.Picture, "https://dummy.profile.com/picture_link");
 
             // Note: in this sample, the granted scopes match the requested scope
@@ -214,6 +218,9 @@ namespace SmacAuthServer.Controllers
             switch (claim.Type)
             {
                 case Claims.Name:
+                case Claims.GivenName:
+                case Claims.FamilyName:
+                case Claims.Picture:
                     yield return Destinations.AccessToken;
 
                     if (claim.Subject?.HasScope(Scopes.Profile) == true)
@@ -233,14 +240,6 @@ namespace SmacAuthServer.Controllers
                     yield return Destinations.AccessToken;
 
                     if (claim.Subject?.HasScope(Scopes.Roles) == true)
-                        yield return Destinations.IdentityToken;
-
-                    yield break;
-
-                case Claims.Picture:
-                    yield return Destinations.AccessToken;
-
-                    if (claim.Subject?.HasScope(Scopes.Profile) == true)
                         yield return Destinations.IdentityToken;
 
                     yield break;
