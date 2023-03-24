@@ -34,65 +34,6 @@ namespace SmacAuthServer.Controllers
             _userManager = userManager;
         }
 
-        [HttpPost("~/connect/token"), Produces("application/json")]
-        public async Task<IActionResult> Token()
-        {
-            var request = HttpContext.GetOpenIddictServerRequest() ??
-           throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
-
-            if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType())
-            {
-                // Retrieve the claims principal stored in the authorization code/refresh token.
-                var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-
-                // Retrieve the user profile corresponding to the authorization code/refresh token.
-                var user = await _userManager.FindByIdAsync(result.Principal.GetClaim(Claims.Subject));
-                if (user is null)
-                {
-                    return Forbid(
-                        authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                        properties: new AuthenticationProperties(new Dictionary<string, string?>
-                        {
-                            [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The token is no longer valid."
-                        }));
-                }
-
-                // Ensure the user is still allowed to sign in.
-                if (!await _signInManager.CanSignInAsync(user))
-                {
-                    return Forbid(
-                        authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                        properties: new AuthenticationProperties(new Dictionary<string, string?>
-                        {
-                            [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The user is no longer allowed to sign in."
-                        }));
-                }
-
-                var identity = new ClaimsIdentity(result.Principal.Claims,
-                    authenticationType: TokenValidationParameters.DefaultAuthenticationType,
-                    nameType: Claims.Name,
-                    roleType: Claims.Role);
-
-                // Override the user claims present in the principal in case they
-                // changed since the authorization code/refresh token was issued.
-                identity.SetClaim(Claims.Subject, await _userManager.GetUserIdAsync(user))
-                        .SetClaim(Claims.Email, await _userManager.GetEmailAsync(user))
-                        .SetClaim(Claims.Name, await _userManager.GetUserNameAsync(user))
-                        .SetClaim(Claims.GivenName, "Given Name")
-                        .SetClaim(Claims.FamilyName, "Surname")
-                        .SetClaim(Claims.Picture, "https://dummy.profile.com/picture_link");
-
-                identity.SetDestinations(GetDestinations);
-
-                // Returning a SignInResult will ask OpenIddict to issue the appropriate access/identity tokens.
-                return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-            }
-
-            throw new InvalidOperationException("The specified grant type is not supported.");
-        }
-
         [HttpGet("~/connect/authorize")]
         [HttpPost("~/connect/authorize")]
         public async Task<IActionResult> Authorize()
@@ -207,6 +148,65 @@ namespace SmacAuthServer.Controllers
 
             // Returning a SignInResult will ask OpenIddict to issue the appropriate access/identity tokens.
             return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        }
+
+        [HttpPost("~/connect/token"), Produces("application/json")]
+        public async Task<IActionResult> Token()
+        {
+            var request = HttpContext.GetOpenIddictServerRequest() ??
+                throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+
+            if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType())
+            {
+                // Retrieve the claims principal stored in the authorization code/refresh token.
+                var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+
+                // Retrieve the user profile corresponding to the authorization code/refresh token.
+                var user = await _userManager.FindByIdAsync(result.Principal.GetClaim(Claims.Subject));
+                if (user is null)
+                {
+                    return Forbid(
+                        authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                        properties: new AuthenticationProperties(new Dictionary<string, string?>
+                        {
+                            [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
+                            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The token is no longer valid."
+                        }));
+                }
+
+                // Ensure the user is still allowed to sign in.
+                if (!await _signInManager.CanSignInAsync(user))
+                {
+                    return Forbid(
+                        authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                        properties: new AuthenticationProperties(new Dictionary<string, string?>
+                        {
+                            [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
+                            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The user is no longer allowed to sign in."
+                        }));
+                }
+
+                var identity = new ClaimsIdentity(result.Principal.Claims,
+                    authenticationType: TokenValidationParameters.DefaultAuthenticationType,
+                    nameType: Claims.Name,
+                    roleType: Claims.Role);
+
+                // Override the user claims present in the principal in case they
+                // changed since the authorization code/refresh token was issued.
+                identity.SetClaim(Claims.Subject, await _userManager.GetUserIdAsync(user))
+                        .SetClaim(Claims.Email, await _userManager.GetEmailAsync(user))
+                        .SetClaim(Claims.Name, await _userManager.GetUserNameAsync(user))
+                        .SetClaim(Claims.GivenName, "Given Name")
+                        .SetClaim(Claims.FamilyName, "Surname")
+                        .SetClaim(Claims.Picture, "https://dummy.profile.com/picture_link");
+
+                identity.SetDestinations(GetDestinations);
+
+                // Returning a SignInResult will ask OpenIddict to issue the appropriate access/identity tokens.
+                return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            }
+
+            throw new InvalidOperationException("The specified grant type is not supported.");
         }
 
         private static IEnumerable<string> GetDestinations(Claim claim)

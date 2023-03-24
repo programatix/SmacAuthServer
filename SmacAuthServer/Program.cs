@@ -1,8 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using OpenIddict.Abstractions;
+using SmacAuthServer;
 using SmacAuthServer.Data;
-using static OpenIddict.Abstractions.OpenIddictConstants;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,10 +39,7 @@ builder.Services.AddOpenIddict()
                .SetTokenEndpointUris(builder.Configuration["OpenIddict:Endpoints:Token"]!)
                .SetUserinfoEndpointUris(builder.Configuration["OpenIddict:Endpoints:Userinfo"]!);
 
-        options.AllowAuthorizationCodeFlow()
-               .AllowImplicitFlow()
-               .AllowRefreshTokenFlow()
-               .AllowClientCredentialsFlow();
+        options.AllowAuthorizationCodeFlow();
 
         // Expose all the supported claims in the discovery document.
         options.RegisterClaims(builder.Configuration.GetSection("OpenIddict:Claims").Get<string[]>()!);
@@ -106,44 +102,3 @@ app.MapRazorPages();
 app.MapControllers();
 
 app.Run();
-
-public class Worker : IHostedService
-{
-    private readonly IServiceProvider _serviceProvider;
-
-    public Worker(IServiceProvider serviceProvider)
-        => _serviceProvider = serviceProvider;
-
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        using var scope = _serviceProvider.CreateScope();
-
-        var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        await context.Database.EnsureCreatedAsync();
-
-        var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
-
-        if (await manager.FindByClientIdAsync("smac_platform") is null)
-        {
-            var client = new OpenIddictApplicationDescriptor
-            {
-                ClientId = "smac_platform",
-                ClientSecret = "388D45FA-B36B-4988-BA59-B187D329C207",
-                DisplayName = "My client application",
-                Permissions =
-                {
-                    Permissions.Endpoints.Token,
-                    Permissions.Endpoints.Authorization,
-                    Permissions.GrantTypes.AuthorizationCode,
-                    Permissions.Scopes.Email,
-                    Permissions.Scopes.Profile,
-                    Permissions.ResponseTypes.Code
-                }
-            };
-            client.RedirectUris.Add(new Uri("https://localhost:44329/signin-smacauth"));
-            await manager.CreateAsync(client);
-        }
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-}
